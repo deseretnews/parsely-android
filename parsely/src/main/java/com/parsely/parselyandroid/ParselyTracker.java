@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * Tracks Parse.ly app views in Android apps
@@ -442,7 +444,7 @@ public class ParselyTracker {
      *
      * @param events The list of event dictionaries to serialize
      */
-    private void sendBatchRequest(ArrayList<Map<String, Object>> events) {
+    private void sendBatchRequest(CopyOnWriteArrayList<Map<String, Object>> events) {
         if (events == null || events.size() == 0) {
             return;
         }
@@ -563,14 +565,19 @@ public class ParselyTracker {
                 PLog("Network unreachable. Not flushing.");
                 return null;
             }
-            HashSet<Map<String, Object>> hs = new HashSet<>();
-            ArrayList<Map<String, Object>> newQueue = new ArrayList<>();
 
-            hs.addAll(eventQueue);
-            hs.addAll(storedQueue);
-            newQueue.addAll(hs);
-            PLog("Flushing queue");
-            sendBatchRequest(newQueue);
+            try {
+                CopyOnWriteArraySet<Map<String, Object>> hs = new CopyOnWriteArraySet<>();
+                CopyOnWriteArrayList<Map<String, Object>> newQueue = new CopyOnWriteArrayList<>();
+                hs.addAll(eventQueue);
+                hs.addAll(storedQueue);
+                newQueue.addAll(hs);
+                PLog("Flushing queue");
+                sendBatchRequest(newQueue);
+            } catch (Exception e) {
+                PLog("Exception modifying flush queue: %s", e.getMessage());
+            }
+
             return null;
         }
     }

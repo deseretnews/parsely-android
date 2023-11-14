@@ -13,8 +13,15 @@ internal class QueueManager(
         // if event queue is too big, push to persisted storage
         if (parselyTracker.inMemoryQueue.size > QUEUE_SIZE_LIMIT) {
             ParselyTracker.PLog("Queue size exceeded, expelling oldest event to persistent memory")
-            localStorageRepository.persistQueue(parselyTracker.inMemoryQueue)
-            parselyTracker.inMemoryQueue.removeAt(0)
+            try {
+                localStorageRepository.persistQueue(parselyTracker.inMemoryQueue)
+                if (parselyTracker.inMemoryQueue.size > 0) {
+                    parselyTracker.inMemoryQueue.removeAt(0)
+                }
+            } catch (e: Exception) {
+                ParselyTracker.PLog("QueueManager: Exception: $e")
+            }
+
             // if persisted storage is too big, expel one
             if (parselyTracker.storedEventsCount() > STORAGE_SIZE_LIMIT) {
                 localStorageRepository.expelStoredEvent()
